@@ -23,8 +23,8 @@ class App extends BaseConfig
      *
      * @var string
      */
-    public $baseURL = 'https://hmsi-its.my.id/';
-    // public $baseURL = 'http://localhost:80/hmsi_niskalarasi/public/';
+    // public $baseURL = 'https://hmsi-its.my.id/';
+    public $baseURL = 'http://localhost:80/hmsi_niskalarasi/public/';
     // public $baseURL = 'https://ec2-108-137-90-238.ap-southeast-3.compute.amazonaws.com/';
 
     /**

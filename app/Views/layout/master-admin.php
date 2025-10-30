@@ -112,7 +112,13 @@
             ((current_url(true)->getSegment(4)) === "piket") &&
             ((current_url(true)->getSegment(5)) === "riwayat") ? "active" : "" ?>">
                 <a href="<?= base_url("/admin/sekre/piket/riwayat") ?>" class="nav-link">
-                    <i data-feather="clock"></i> <span>Riwayat Piket</span></a>
+                <i data-feather="clock"></i> <span>Riwayat Piket</span></a>
+            </li>
+            <li class="nav-item <?= ((current_url(true)->getSegment(3)) === "sekre") &&
+            ((current_url(true)->getSegment(4)) === "piket")  &&
+            ((current_url(true)->getSegment(5)) === "ruangan") ? "active" : "" ?>">
+                <a href="<?= base_url("/admin/sekre/piket/ruangan") ?>" class="nav-link">
+                    <i data-feather="home"></i> <span>Peminjaman Ruangan</span></a>
             </li>
             <?php if(session()->get("id_pengurus") < 20000): ?>
             <li class="nav-item <?= ((current_url(true)->getSegment(3)) === "sekre") &&
