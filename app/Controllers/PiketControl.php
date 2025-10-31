@@ -2,6 +2,7 @@
 
 namespace App\Controllers;
 
+use App\Models\Departemen;
 use App\Models\Jadwal;
 use App\Models\Piket;
 use App\Modules\Breadcrumbs\Breadcrumbs;
@@ -15,6 +16,7 @@ class PiketControl extends BaseController
     public Breadcrumbs $breadcrumbs;
     public Piket $piket;
     public Jadwal $jadwal;
+    public Departemen $departemen;
     public int $id_pengurus;
     public array $batas;
 
@@ -23,6 +25,7 @@ class PiketControl extends BaseController
         $this->breadcrumbs = new Breadcrumbs();
         $this->piket = new Piket();
         $this->jadwal = new Jadwal();
+        $this->departemen = new Departemen();
         $this->id_pengurus = session("id_pengurus");
     }
 
@@ -107,13 +110,45 @@ class PiketControl extends BaseController
         $model = new PeminjamanModel();
 
         // Urutkan: status 'sedang' dulu, lalu berdasarkan tanggal terbaru
-        $data = $model
-            ->orderBy("CASE WHEN status = 'sedang' THEN 1 ELSE 0 END", "DESC")
-            ->orderBy("tanggal", "DESC")
-            ->findAll();
+        // $data = $model
+        //     ->orderBy("CASE WHEN status = 'sedang' THEN 1 ELSE 0 END", "DESC")
+        //     ->orderBy("tanggal", "DESC")
+        //     ->findAll();
+        $data = $model->getAllWithRelations();
+
+        $now = new DateTime('now');
+
+        // Array untuk memasukkan data sesuai dengan status-nya
+        $sedang = [];
+        $belum = [];
+        $selesai = [];
+
+        // foreach untuk memasukkan status sesuai dengan jam saat ini
+        foreach ($data as &$d) {
+            $mulai = new DateTime($d['tanggal'] . ' ' . $d['jam_mulai']);
+            $akhir = new DateTime($d['tanggal'] . ' ' . $d['jam_akhir']);
+
+            if ($now < $mulai) {
+                $d['status'] = 'belum';
+                $belum[] = $d;
+            } elseif ($now >= $mulai && $now <= $akhir) {
+                $d['status'] = 'sedang';
+                $sedang[] = $d;
+            } else {
+                $d['status'] = 'selesai';
+                $selesai[] = $d;
+            }
+        }
+
+        // menggabungkan array sedang, belum, selesai ke dalam $data
+        $data = array_merge($sedang, $belum, $selesai);
+
+        $departemens = $this->departemen->findAll();
+        // dd($departemens);
 
         return view("admin/sekre/piket/ruangan", [
             "data" => $data,
+            "departemens" => $departemens,
             "breadcrumbs" => $breadcrumbs
         ]);
     }
@@ -123,20 +158,19 @@ class PiketControl extends BaseController
     {
         $model = new PeminjamanModel();
 
+        $namaKegiatan = $this->request->getPost("nama_kegiatan");
         $tanggal = $this->request->getPost("tanggal");
         $jamMulai = $this->request->getPost("jam_mulai");
         $jamAkhir = $this->request->getPost("jam_akhir");
-        $namaKegiatan = $this->request->getPost("nama_kegiatan");
         $departemen = $this->request->getPost("departemen");
-        $penanggungJawab = $this->request->getPost("penanggung_jawab");
+        $pengurus = $this->id_pengurus;
+
+
 
         // 🔍 Cek apakah ada jadwal bentrok di tanggal yang sama
-        $db = \Config\Database::connect();
-        $builder = $db->table('peminjaman');
-        $builder->where('tanggal', $tanggal);
-        $builder->where('jam_mulai <', $jamAkhir);
-        $builder->where('jam_akhir >', $jamMulai);
-        $conflict = $builder->get()->getRow();
+        // $db = \Config\Database::connect();
+        $query = $model->where('tanggal', $tanggal)->where('jam_mulai <', $jamAkhir)->where('jam_akhir >', $jamMulai);
+        $conflict = $query->get()->getRow();
 
         if ($conflict) {
             return redirect()->back()->with("error", "Waktu sudah terpakai, pilih waktu lain!");
@@ -148,9 +182,8 @@ class PiketControl extends BaseController
             "tanggal" => $tanggal,
             "jam_mulai" => $jamMulai,
             "jam_akhir" => $jamAkhir,
-            "departemen" => $departemen,
-            "penanggung_jawab" => $penanggungJawab,
-            "status" => "sedang"
+            "id_departemen" => (int) $departemen,
+            "id_pengurus" => $pengurus,
         ]);
 
         if (!$model->db->affectedRows()) {

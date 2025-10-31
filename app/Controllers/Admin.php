@@ -41,18 +41,17 @@ class Admin extends BaseController
         $nrp = $this->request->getPost("username");
         $pass = $this->request->getPost("password");
 
-        $query1 = $this->pengurus->where("nrp",$nrp)
+        $query1 = $this->pengurus->where("nrp", $nrp)
             ->first();
 
-        if($query1 !== null && password_verify($pass,$query1->password))
-        {
+        if ($query1 !== null && password_verify($pass, $query1->password)) {
             (session())->remove("id_pengurus");
-            (session())->set("id_pengurus",$query1->id_pengurus);
+            (session())->set("id_pengurus", $query1->id_pengurus);
 
             return redirect()->to(base_url("/admin/beranda"));
         }
         return redirect()->to(base_url("admin/login"))
-            ->with("error","NRP atau Kata Sandi <b>SALAH</b>");
+            ->with("error", "NRP atau Kata Sandi <b>SALAH</b>");
     }
 
     public function logout(): RedirectResponse
@@ -63,17 +62,18 @@ class Admin extends BaseController
 
     public function beranda(): string
     {
-        $query1 = $this->acara->select(["nama_acara","tanggal","nama_departemen","acara.id_departemen"])
-            ->where("tanggal >=", date_format(date_create(),"Y-m-d"))
-            ->join("pengurus","acara.pembuat = pengurus.id_pengurus")
-            ->join("departemen","pengurus.id_departemen = departemen.id_departemen")
+
+        $query1 = $this->acara->select(["nama_acara", "tanggal", "nama_departemen", "acara.id_departemen"])
+            ->where("tanggal >=", date_format(date_create(), "Y-m-d"))
+            ->join("pengurus", "acara.pembuat = pengurus.id_pengurus")
+            ->join("departemen", "pengurus.id_departemen = departemen.id_departemen")
             ->orderBy("tanggal")
             ->limit(5)
             ->get()
             ->getResult();
 
-        $query2 = $this->acara->select(["nama_departemen","COUNT(acara.id_departemen) as jumlah"])
-            ->join("departemen","acara.id_departemen = departemen.id_departemen","right")
+        $query2 = $this->acara->select(["nama_departemen", "COUNT(acara.id_departemen) as jumlah"])
+            ->join("departemen", "acara.id_departemen = departemen.id_departemen", "right")
             ->groupBy("departemen.id_departemen")
             ->orderBy("departemen.id_departemen")
             ->get()
@@ -103,45 +103,44 @@ class Admin extends BaseController
         $bulan3_akhir = new DateTime("2024-08-31 23:59:59");
 
         $id_bulan = 0;
-        if($sekarang >= $bulan1_awal && $sekarang <= $bulan1_akhir)
-        {
+        if ($sekarang >= $bulan1_awal && $sekarang <= $bulan1_akhir) {
             $id_bulan = 1;
-        }
-        else if($sekarang >= $bulan2_awal && $sekarang <= $bulan2_akhir)
-        {
+        } else if ($sekarang >= $bulan2_awal && $sekarang <= $bulan2_akhir) {
             $id_bulan = 2;
-        }
-        else if($sekarang >= $bulan3_awal && $sekarang <= $bulan3_akhir)
-        {
+        } else if ($sekarang >= $bulan3_awal && $sekarang <= $bulan3_akhir) {
             $id_bulan = 3;
         }
 
-        $query3 = $this->nilai->select(["pengurus.id_departemen","CAST((CAST(SUM(nilai.nilai) / (COUNT(nilai.id_pengurus) / 2) AS INT) / 2) AS INT) AS rerata"])
-            ->where("nilai.id_indikator <=",2)
-            ->where("nilai.id_bulan",$id_bulan)
-            ->join("pengurus","nilai.id_pengurus = pengurus.id_pengurus")
+        // $query3 = [];
+        $query3 = $this->nilai->select(["pengurus.id_departemen", "CAST((CAST(SUM(nilai.nilai) / (COUNT(nilai.id_pengurus) / 2) AS INT) / 2) AS INT) AS rerata"])
+            ->where("nilai.id_indikator <=", 2)
+            ->where("nilai.id_bulan", $id_bulan)
+            ->join("pengurus", "nilai.id_pengurus = pengurus.id_pengurus")
             ->groupBy("pengurus.id_departemen")
             ->orderBy("pengurus.id_departemen")
             ->get()
             ->getResult();
 
-        $query4 = $this->nilai->select(["pengurus.id_departemen","CAST((CAST(SUM(nilai.nilai) / (COUNT(nilai.id_pengurus) / 3) AS INT) / 3) AS INT) AS rerata"])
-            ->where("nilai.id_indikator >=",3)
-            ->where("nilai.id_bulan",$id_bulan)
-            ->join("pengurus","nilai.id_pengurus = pengurus.id_pengurus")
+        // $query4 = [];
+        $query4 = $this->nilai->select(["pengurus.id_departemen", "CAST((CAST(SUM(nilai.nilai) / (COUNT(nilai.id_pengurus) / 3) AS INT) / 3) AS INT) AS rerata"])
+            ->where("nilai.id_indikator >=", 3)
+            ->where("nilai.id_bulan", $id_bulan)
+            ->join("pengurus", "nilai.id_pengurus = pengurus.id_pengurus")
             ->groupBy("pengurus.id_departemen")
             ->orderBy("pengurus.id_departemen")
             ->get()
             ->getResult();
 
         $query5 = $this->nilai->select("id_pengurus")
-            ->where("id_bulan",$id_bulan)
-            ->where("nilai >",0)
+            ->where("id_bulan", $id_bulan)
+            ->where("nilai >", 0)
             ->get()
             ->getResult();
 
-        return view("admin/index",
-            ["data" => $query1, "data1" => $query2, "data2" => $data2, "data3" => $query3, "data4" => $query4, "data5" => $query5]);
+        return view(
+            "admin/index",
+            ["data" => $query1, "data1" => $query2, "data2" => $data2, "data3" => $query3, "data4" => $query4, "data5" => $query5]
+        );
     }
 
     public function sekre_data_dashboard(): string
@@ -153,8 +152,10 @@ class Admin extends BaseController
         $query1 = $this->mhs->get()
             ->getResult();
 
-        return view("admin/sekre/data/dashboard",
-            ["data" => $query1, "breadcrumbs" => $breadcrumbs]);
+        return view(
+            "admin/sekre/data/dashboard",
+            ["data" => $query1, "breadcrumbs" => $breadcrumbs]
+        );
     }
 
     public function akun_ubah(): string
@@ -166,7 +167,7 @@ class Admin extends BaseController
         $query1 = $this->pengurus->where("id_pengurus", session("id_pengurus"))
             ->first();
 
-        return view("admin/ubah",["data" => $query1, "breadcrumbs" => $breadcrumbs]);
+        return view("admin/ubah", ["data" => $query1, "breadcrumbs" => $breadcrumbs]);
     }
 
     public function akun_ubah_kirim(): RedirectResponse
@@ -186,7 +187,7 @@ class Admin extends BaseController
             ->update();
 
         return redirect()->to("admin/akun/ubah")
-            ->with("berhasil","Kontak untuk narahubung berhasil diperbarui");
+            ->with("berhasil", "Kontak untuk narahubung berhasil diperbarui");
     }
 
     public function akun_ubah_pass(): RedirectResponse
@@ -195,42 +196,38 @@ class Admin extends BaseController
         $pass_baru1 = $this->request->getPost("pass_baru1");
         $pass_baru2 = $this->request->getPost("pass_baru2");
 
-        if($pass_baru1 === $pass_baru2)
-        {
+        if ($pass_baru1 === $pass_baru2) {
             $pengurus = new Pengurus();
             $query1 = $pengurus->select("password")
                 ->where("id_pengurus", session("id_pengurus"))
                 ->first();
 
-            if(password_verify($pass_lama,$query1->password))
-            {
-                $pass_baru = password_hash($pass_baru1,PASSWORD_DEFAULT);
-                $query2 = $pengurus->set("password",$pass_baru)
+            if (password_verify($pass_lama, $query1->password)) {
+                $pass_baru = password_hash($pass_baru1, PASSWORD_DEFAULT);
+                $query2 = $pengurus->set("password", $pass_baru)
                     ->where("id_pengurus", session("id_pengurus"))
                     ->update();
 
-                if($query2 > 0)
-                {
+                if ($query2 > 0) {
                     return redirect()->to(base_url("admin/beranda"))
-                        ->with("berhasil","Kata Sandi berhasil diganti");
+                        ->with("berhasil", "Kata Sandi berhasil diganti");
                 }
             }
             return redirect()->to(base_url("admin/akun/ubah"))
-                ->with("error","Kata Sandi lama yang dimasukkan <b>SALAH</b>");
+                ->with("error", "Kata Sandi lama yang dimasukkan <b>SALAH</b>");
         }
         return redirect()->to(base_url("admin/akun/ubah"))
-            ->with("error","Kata Sandi baru dan konfirmasi sandi <b>TIDAK COCOK</b>");
+            ->with("error", "Kata Sandi baru dan konfirmasi sandi <b>TIDAK COCOK</b>");
     }
 
     public function tautan_alih($pendek)
     {
         $tautan = new Tautan();
         $query1 = $tautan->select("panjang")
-            ->where("pendek",$pendek)
+            ->where("pendek", $pendek)
             ->first();
 
-        if($query1 !== null)
-        {
+        if ($query1 !== null) {
             return redirect()->to($query1->panjang);
         }
         return view("errors/404");
@@ -239,7 +236,7 @@ class Admin extends BaseController
     public function survei_alih($id_survei)
     {
         $survei = new Survei();
-        $query1 = $survei->where("id_survei",$id_survei)
+        $query1 = $survei->where("id_survei", $id_survei)
             ->join("departemen", "survei.id_departemen = departemen.id_departemen")
             ->first();
 

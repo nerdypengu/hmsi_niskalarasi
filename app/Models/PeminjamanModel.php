@@ -13,9 +13,8 @@ class PeminjamanModel extends Model
         'tanggal',
         'jam_mulai',
         'jam_akhir',
-        'departemen',
-        'penanggung_jawab',
-        'status'
+        'id_departemen',
+        'id_pengurus',
     ];
 
     // 🔍 Cek apakah waktu yang diajukan bentrok dengan jadwal yang ada
@@ -27,5 +26,14 @@ class PeminjamanModel extends Model
             ->orWhere("$akhir BETWEEN jam_mulai AND jam_akhir", null, false)
             ->groupEnd()
             ->countAllResults() === 0;
+    }
+
+    public function getAllWithRelations()
+    {
+        return $this->select('peminjaman.*, departemen.nama_departemen, pengurus.nama_panggilan')
+            ->join('departemen', 'departemen.id_departemen = peminjaman.id_departemen', 'left')
+            ->join('pengurus', 'pengurus.id_pengurus = peminjaman.id_pengurus', 'left')
+            ->orderBy('tanggal', 'ASC')
+            ->findAll();
     }
 }
