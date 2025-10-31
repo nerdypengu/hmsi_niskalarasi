@@ -46,7 +46,7 @@
             <?php elseif ($d['status'] === 'selesai'): ?>
               <span class="badge badge-success">Selesai</span>
             <?php else: ?>
-              <span class="badge badge-secondary"><?= esc($d['status']) ?></span>
+              <span class="badge badge-secondary">Belum</span>
             <?php endif; ?>
           </td>
         </tr>
