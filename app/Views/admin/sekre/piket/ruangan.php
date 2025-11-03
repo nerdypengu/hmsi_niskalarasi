@@ -9,14 +9,22 @@
 
   <?= $this->section("konten") ?>
 
-  <!-- ✅ Tombol Tambah -->
-  <div class="mb-3 text-right">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <label class="mr-2 tx-bold">Filter Status:</label>
+      <div class="btn-group btn-group-sm" role="group" aria-label="Filter Status">
+        <button class="btn btn-outline-secondary active" data-status="all">Semua</button>
+        <button class="btn btn-outline-secondary" data-status="belum">Belum</button>
+        <button class="btn btn-outline-secondary" data-status="sedang">Sedang Dipinjam</button>
+        <button class="btn btn-outline-secondary" data-status="selesai">Selesai</button>
+      </div>
+    </div>
+
     <button class="btn btn-primary btn-sm" data-toggle="modal" data-target="#modalTambah">
       <i data-feather="plus"></i> Tambah Peminjaman
     </button>
   </div>
 
-  <!-- ✅ Tabel -->
   <table id="tabel-peminjaman" class="table table-hover table-bordered">
     <thead>
       <tr class="tx-center tx-bold">
@@ -88,11 +96,10 @@
             </div>
             <div class="form-group">
               <label for="departemen" class="tx-bold">Departemen</label>
-              <!-- <input type="text" name="departemen" class="form-control" required> -->
               <select name="departemen" id="departemen" class="form-control">
                 <option selected disabled>Pilih Departemen</option>
-                <?php foreach ($departemens as $i => $departemen): ?>
-                  <option value=<?= $departemen->id_departemen; ?>><?= $departemen->nama_departemen; ?></option>
+                <?php foreach ($departemens as $departemen): ?>
+                  <option value="<?= $departemen->id_departemen; ?>"><?= $departemen->nama_departemen; ?></option>
                 <?php endforeach; ?>
               </select>
             </div>
@@ -113,15 +120,28 @@
 
   <?= $this->section("js") ?>
   <script>
-    $('#tabel-peminjaman').DataTable({
-      order: [
-        [0, 'asc']
+    const table = $('#tabel-peminjaman').DataTable({
+      order: [[0, 'asc']],
+      columnDefs: [
+        { targets: 7, orderable: true }
       ],
-      columnDefs: [{
-        targets: 7,
-        orderable: true
-      }],
       <?= $this->include("layout/datatable.txt") ?>
+    });
+
+    $('[data-status]').on('click', function() {
+      const status = $(this).data('status');
+      $('[data-status]').removeClass('active');
+      $(this).addClass('active');
+
+      if (status === 'all') {
+        table.column(7).search('').draw();
+      } else if (status === 'belum') {
+        table.column(7).search('Belum').draw();
+      } else if (status === 'sedang') {
+        table.column(7).search('Sedang Dipinjam').draw();
+      } else if (status === 'selesai') {
+        table.column(7).search('Selesai').draw();
+      }
     });
 
     $('#modalTambah').on('shown.bs.modal', function() {
