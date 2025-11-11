@@ -33,9 +33,9 @@ class Database extends Config
     public $default = [
         'DSN'      => '',
         'hostname' => 'localhost',
-        'username' => '',
+        'username' => 'root',
         'password' => '',
-        'database' => '',
+        'database' => 'hmsi_niskalarasi',
         'DBDriver' => 'MySQLi',
         'DBPrefix' => '',
         'pConnect' => false,
@@ -61,7 +61,7 @@ class Database extends Config
         'hostname' => '127.0.0.1',
         'username' => '',
         'password' => '',
-        'database' => ':memory:',
+        'database' => 'hmsi_niskalarasi',
         'DBDriver' => 'SQLite3',
         'DBPrefix' => 'db_',  // Needed to ensure we're working correctly with prefixes live. DO NOT REMOVE FOR CI DEVS
         'pConnect' => false,

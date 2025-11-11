@@ -127,10 +127,13 @@ $routes->group("admin", ['filter' => 'auth'] ,function ($routes)
         $routes->group("piket", function ($routes){
             $routes->get("dashboard",[PiketControl::class,"index"]);
             $routes->get("riwayat",[PiketControl::class,"riwayat"]);
+            $routes->get("ruangan",[PiketControl::class,"ruangan"]);
             $routes->get("kontrol",[PiketControl::class,"kontrol"]);
             $routes->post("hadir",[PiketControl::class,"hadir"]);
             $routes->post("pulang",[PiketControl::class,"pulang"]);
             $routes->post("ubah",[PiketControl::class,"ubah"]);
+            $routes->post("ruangan/tambah",[PiketControl::class,"tambahPeminjaman"]); 
+
         });
 
         $routes->group("data", function ($routes){

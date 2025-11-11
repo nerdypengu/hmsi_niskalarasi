@@ -2,9 +2,11 @@
 
 namespace App\Controllers;
 
+use App\Models\Departemen;
 use App\Models\Jadwal;
 use App\Models\Piket;
 use App\Modules\Breadcrumbs\Breadcrumbs;
+use App\Models\PeminjamanModel;
 use CodeIgniter\HTTP\RedirectResponse;
 use DateTime;
 use DateTimeZone;
@@ -14,6 +16,7 @@ class PiketControl extends BaseController
     public Breadcrumbs $breadcrumbs;
     public Piket $piket;
     public Jadwal $jadwal;
+    public Departemen $departemen;
     public int $id_pengurus;
     public array $batas;
 
@@ -22,6 +25,7 @@ class PiketControl extends BaseController
         $this->breadcrumbs = new Breadcrumbs();
         $this->piket = new Piket();
         $this->jadwal = new Jadwal();
+        $this->departemen = new Departemen();
         $this->id_pengurus = session("id_pengurus");
     }
 
@@ -31,23 +35,25 @@ class PiketControl extends BaseController
         $this->breadcrumbs->add("Kehadiran Piket", "/admin/sekre/piket/dashboard");
         $breadcrumbs = $this->breadcrumbs->render();
 
-        $query1 = $this->piket->where("id_pengurus",$this->id_pengurus)
-            ->where("status",1)
+        $query1 = $this->piket->where("id_pengurus", $this->id_pengurus)
+            ->where("status", 1)
             ->countAllResults();
 
-        $query2 = $this->jadwal->where("id_pengurus",$this->id_pengurus)
+        $query2 = $this->jadwal->where("id_pengurus", $this->id_pengurus)
             ->first();
 
         $this->cek_tanggal();
         [$bawah, $atas] = $this->batas;
 
-        $query3 = $this->piket->where("id_pengurus",$this->id_pengurus)
-            ->where("waktu_datang >=",$bawah)
-            ->where("waktu_datang <=",$atas)
+        $query3 = $this->piket->where("id_pengurus", $this->id_pengurus)
+            ->where("waktu_datang >=", $bawah)
+            ->where("waktu_datang <=", $atas)
             ->first();
 
-        return view("admin/sekre/piket/index",
-            ["data1" => $query1, "data2" => $query2, "data3" => $query3, "breadcrumbs" => $breadcrumbs]);
+        return view(
+            "admin/sekre/piket/index",
+            ["data1" => $query1, "data2" => $query2, "data3" => $query3, "breadcrumbs" => $breadcrumbs]
+        );
     }
 
     public function riwayat(): string
@@ -59,14 +65,16 @@ class PiketControl extends BaseController
         $this->cek_tanggal();
         [$bawah,] = $this->batas;
 
-        $query4 = $this->piket->where("id_pengurus",$this->id_pengurus)
-            ->where("waktu_datang <=",$bawah)
-            ->orderBy("waktu_datang","desc")
+        $query4 = $this->piket->where("id_pengurus", $this->id_pengurus)
+            ->where("waktu_datang <=", $bawah)
+            ->orderBy("waktu_datang", "desc")
             ->get()
             ->getResult();
 
-        return view("admin/sekre/piket/riwayat",
-            ["data4" => $query4, "breadcrumbs" => $breadcrumbs]);
+        return view(
+            "admin/sekre/piket/riwayat",
+            ["data4" => $query4, "breadcrumbs" => $breadcrumbs]
+        );
     }
 
     public function kontrol(): string
@@ -76,19 +84,114 @@ class PiketControl extends BaseController
         $breadcrumbs = $this->breadcrumbs->render();
 
         $query5 = $this->jadwal->select(["(CASE WHEN jadwal.status = 0 THEN 'Belum' ELSE 'Selesai' END) as 'status'"])
-            ->select(["pengurus.id_pengurus","jadwal_wajib","nama","nama_departemen"])
+            ->select(["pengurus.id_pengurus", "jadwal_wajib", "nama", "nama_departemen"])
             ->join("pengurus", "jadwal.id_pengurus = pengurus.id_pengurus")
-            ->join("mhs","pengurus.nrp = mhs.nrp")
-            ->join("departemen","pengurus.id_departemen = departemen.id_departemen")
+            ->join("mhs", "pengurus.nrp = mhs.nrp")
+            ->join("departemen", "pengurus.id_departemen = departemen.id_departemen")
             ->orderBy("pengurus.id_departemen")
             ->orderBy("jadwal_wajib")
             ->orderBy("nama")
-            ->where("jadwal_wajib >","2024-01-01")
+            ->where("jadwal_wajib >", "2024-01-01")
             ->get()
             ->getResult();
 
-        return view("admin/sekre/piket/kontrol",
-            ["data5" => $query5, "breadcrumbs" => $breadcrumbs]);
+        return view(
+            "admin/sekre/piket/kontrol",
+            ["data5" => $query5, "breadcrumbs" => $breadcrumbs]
+        );
+    }
+
+    public function ruangan(): string
+    {
+        $this->breadcrumbs->add("Beranda", "/admin/beranda");
+        $this->breadcrumbs->add("Peminjaman Ruangan", "/admin/sekre/piket/ruangan");
+        $breadcrumbs = $this->breadcrumbs->render();
+
+        $model = new PeminjamanModel();
+
+        // Urutkan: status 'sedang' dulu, lalu berdasarkan tanggal terbaru
+        // $data = $model
+        //     ->orderBy("CASE WHEN status = 'sedang' THEN 1 ELSE 0 END", "DESC")
+        //     ->orderBy("tanggal", "DESC")
+        //     ->findAll();
+        $data = $model->getAllWithRelations();
+
+        $now = new DateTime('now');
+
+        // Array untuk memasukkan data sesuai dengan status-nya
+        $sedang = [];
+        $belum = [];
+        $selesai = [];
+
+        // foreach untuk memasukkan status sesuai dengan jam saat ini
+        foreach ($data as &$d) {
+            $mulai = new DateTime($d['tanggal'] . ' ' . $d['jam_mulai']);
+            $akhir = new DateTime($d['tanggal'] . ' ' . $d['jam_akhir']);
+
+            if ($now < $mulai) {
+                $d['status'] = 'belum';
+                $belum[] = $d;
+            } elseif ($now >= $mulai && $now <= $akhir) {
+                $d['status'] = 'sedang';
+                $sedang[] = $d;
+            } else {
+                $d['status'] = 'selesai';
+                $selesai[] = $d;
+            }
+        }
+
+        // menggabungkan array sedang, belum, selesai ke dalam $data
+        $data = array_merge($sedang, $belum, $selesai);
+
+        $departemens = $this->departemen->findAll();
+        // dd($departemens);
+
+        return view("admin/sekre/piket/ruangan", [
+            "data" => $data,
+            "departemens" => $departemens,
+            "breadcrumbs" => $breadcrumbs
+        ]);
+    }
+
+    // ✅ Tambah data peminjaman
+    public function tambahPeminjaman()
+    {
+        $model = new PeminjamanModel();
+
+        $namaKegiatan = $this->request->getPost("nama_kegiatan");
+        $tanggal = $this->request->getPost("tanggal");
+        $jamMulai = $this->request->getPost("jam_mulai");
+        $jamAkhir = $this->request->getPost("jam_akhir");
+        $departemen = $this->request->getPost("departemen");
+        $pengurus = $this->id_pengurus;
+
+
+
+        // 🔍 Cek apakah ada jadwal bentrok di tanggal yang sama
+        // $db = \Config\Database::connect();
+        $query = $model->where('tanggal', $tanggal)->where('jam_mulai <', $jamAkhir)->where('jam_akhir >', $jamMulai);
+        $conflict = $query->get()->getRow();
+
+        if ($conflict) {
+            return redirect()->back()->with("error", "Waktu sudah terpakai, pilih waktu lain!");
+        }
+
+        // Simpan data ke database
+        $model->insert([
+            "nama_kegiatan" => $namaKegiatan,
+            "tanggal" => $tanggal,
+            "jam_mulai" => $jamMulai,
+            "jam_akhir" => $jamAkhir,
+            "id_departemen" => (int) $departemen,
+            "id_pengurus" => $pengurus,
+        ]);
+
+        if (!$model->db->affectedRows()) {
+            dd($model->errors(), $model->db->getLastQuery());
+        }
+
+        return redirect()->to(base_url("admin/sekre/piket/ruangan"))
+            ->with("berhasil", "Peminjaman berhasil ditambahkan!");
     }
 
     public function hadir(): RedirectResponse
@@ -99,12 +202,11 @@ class PiketControl extends BaseController
         $tanggal = date("Y-m-d");
 
         $jadwal = new Jadwal();
-        $query1 = $jadwal->where("id_pengurus",$this->id_pengurus)
+        $query1 = $jadwal->where("id_pengurus", $this->id_pengurus)
             ->first();
         ($query1->jadwal_wajib === $tanggal) ? $status = 0 : $status = 1;
 
-        if($this->cek_ip() === 1)
-        {
+        if ($this->cek_ip() === 1) {
             $piket = new Piket();
             $data = [
                 "id_pengurus" => $this->id_pengurus,
@@ -114,10 +216,10 @@ class PiketControl extends BaseController
             $piket->insert($data);
 
             return redirect()->to(base_url("admin/sekre/piket/dashboard"))
-                ->with("berhasil","Data kehadiran berhasil disimpan");
+                ->with("berhasil", "Data kehadiran berhasil disimpan");
         }
         return redirect()->to(base_url("admin/sekre/piket/dashboard"))
-            ->with("error","Kamu sedang tidak menggunakan internet lokal ITS. Gunakan <b>internet lokal ITS</b> untuk melakukan piket!");
+            ->with("error", "Kamu sedang tidak menggunakan internet lokal ITS. Gunakan <b>internet lokal ITS</b> untuk melakukan piket!");
     }
 
     public function pulang(): RedirectResponse
@@ -134,52 +236,48 @@ class PiketControl extends BaseController
             ->format('Y-m-d H:i:s');
 
         $piket = new Piket();
-        $query1 = $piket->where("id_pengurus",$this->id_pengurus)
-            ->where("waktu_datang >=",$bawah)
-            ->where("waktu_datang <=",$atas)
+        $query1 = $piket->where("id_pengurus", $this->id_pengurus)
+            ->where("waktu_datang >=", $bawah)
+            ->where("waktu_datang <=", $atas)
             ->first();
 
-        if($query1 !== null)
-        {
-            if($this->cek_ip() === 1)
-            {
+        if ($query1 !== null) {
+            if ($this->cek_ip() === 1) {
                 $jadwal = new Jadwal();
-                $query2 = $jadwal->where("id_pengurus",$this->id_pengurus)
+                $query2 = $jadwal->where("id_pengurus", $this->id_pengurus)
                     ->first();
 
                 $piket->set(["waktu_keluar" => $waktu])
-                    ->where("id_piket",$query1->id_piket)
+                    ->where("id_piket", $query1->id_piket)
                     ->update();
 
-                if($query2->jadwal_wajib === $tanggal)
-                {
+                if ($query2->jadwal_wajib === $tanggal) {
                     $mulai = $query1->waktu_datang;
                     $durasi = strtotime($waktu) - strtotime($mulai);
 
-                    if($durasi < 7200)
-                    {
+                    if ($durasi < 7200) {
                         $piket->set(["waktu_keluar" => null])
-                            ->where("id_piket",$query1->id_piket)
+                            ->where("id_piket", $query1->id_piket)
                             ->update();
 
                         return redirect()->to(base_url("admin/sekre/piket"))
-                            ->with("error","Durasi piket belum mencapai <b>2 jam</b>. Silakan tunggu hingga 2 jam.");
+                            ->with("error", "Durasi piket belum mencapai <b>2 jam</b>. Silakan tunggu hingga 2 jam.");
                     }
                     $jadwal->set(["status" => 1])
-                        ->where("id_pengurus",$this->id_pengurus)
+                        ->where("id_pengurus", $this->id_pengurus)
                         ->update();
 
                     return redirect()->to(base_url("admin/sekre/piket/dashboard"))
-                        ->with("berhasil","Terima kasih sudah melaksanakan Piket Wajib sesuai jadwal 😊");
+                        ->with("berhasil", "Terima kasih sudah melaksanakan Piket Wajib sesuai jadwal 😊");
                 }
                 return redirect()->to(base_url("admin/sekre/piket/dashboard"))
-                    ->with("berhasil","Data kepulangan berhasil disimpan");
+                    ->with("berhasil", "Data kepulangan berhasil disimpan");
             }
             return redirect()->to(base_url("admin/sekre/piket/dashboard"))
-                ->with("error","Kamu sedang tidak menggunakan internet lokal ITS. Gunakan <b>internet lokal ITS</b> untuk melakukan piket!");
+                ->with("error", "Kamu sedang tidak menggunakan internet lokal ITS. Gunakan <b>internet lokal ITS</b> untuk melakukan piket!");
         }
         return redirect()->to(base_url("admin/sekre/piket/dashboard"))
-            ->with("error","Data kehadiran wajib diisi terlebih dahulu!");
+            ->with("error", "Data kehadiran wajib diisi terlebih dahulu!");
     }
 
     public function ubah(): RedirectResponse
@@ -189,11 +287,11 @@ class PiketControl extends BaseController
 
         $jadwal = new Jadwal();
         $jadwal->set(["jadwal_wajib" => $tanggal])
-            ->where("id_pengurus",$id_pengurus)
+            ->where("id_pengurus", $id_pengurus)
             ->update();
 
         return redirect()->to(base_url("admin/sekre/piket"))
-            ->with("berhasil","Perubahan jadwal piket berhasil disimpan");
+            ->with("berhasil", "Perubahan jadwal piket berhasil disimpan");
     }
 
     public function cek_ip()
@@ -201,7 +299,7 @@ class PiketControl extends BaseController
         $ip_klien = $_SERVER['HTTP_CLIENT_IP'] ?? ($_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR']);
         $ip_valid = '/^103\.94\.(18[89]|19[01])\.([1-9]?\d|[12]\d\d)$/';
 
-        return preg_match($ip_valid,$ip_klien);
+        return preg_match($ip_valid, $ip_klien);
     }
 
     public function cek_tanggal(): void
